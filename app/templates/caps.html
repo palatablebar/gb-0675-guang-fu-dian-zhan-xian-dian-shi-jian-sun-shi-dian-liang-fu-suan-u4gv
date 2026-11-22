@@ -1,0 +1,46 @@
+{% extends 'base.html' %}{% block content %}
+<section class="panel">
+  <div class="panel__head"><h2>并网点调度上限依据</h2><span>依据编号 {{ view.metrics['依据编号'] }}</span></div>
+  <p class="cap-note">每条窗口按设备与半开时间窗 [开始, 结束) 命中采样时刻；无窗口时段仅受设备交流额定容量约束。原始字节单独留档，可在下方下载，切换依据不删除任何凭据。</p>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>窗口编号</th><th>设备</th><th>开始 UTC</th><th>结束 UTC</th><th>并网点上限 kW</th><th>依据来源</th></tr></thead>
+      <tbody>
+      {% for row in view.rows %}
+        <tr><td>{{ row.id }}</td><td>{{ row.device }}</td><td>{{ row.start }}</td><td>{{ row.end }}</td><td>{{ row.cap_kw }}</td><td>{{ row.source }}</td></tr>
+      {% else %}
+        <tr><td>暂无有效窗口。</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+<div class="grid">
+  <section class="panel">
+    <div class="panel__head"><h2>依据隔离行</h2><span>{{ view.quarantine|length }} 行</span></div>
+    {% if view.quarantine %}
+    <div class="table-scroll"><table><thead><tr><th>原始行</th><th>编号</th><th>原因码</th><th>原因</th></tr></thead>
+      <tbody>{% for q in view.quarantine %}<tr><td>{{ q.line }}</td><td>{{ q.id }}</td><td>{{ q.code }}</td><td>{{ q.detail }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="cap-note">无隔离窗口。</p>{% endif %}
+  </section>
+  <section class="panel">
+    <div class="panel__head"><h2>导入新上限依据</h2></div>
+    <details class="source-input" open>
+      <summary>粘贴 / 选择上限依据 CSV</summary>
+      <input type="file" id="cap-file" accept=".csv,text/csv">
+      <textarea id="cap-text" aria-label="上限依据CSV" placeholder="id,device,start,end,cap_kw,source"></textarea>
+      <label class="cap-label">依据备注 <input type="text" id="cap-label" placeholder="例如：调度台二次修正指令"></label>
+      <button id="cap-import">上传并校验依据</button>
+    </details>
+    <div class="cap-actions">
+      <a class="export" href="/api/cap-bases/{{ view.metrics['依据编号'] }}/raw">下载当前依据原始 CSV</a>
+    </div>
+  </section>
+</div>
+<section class="panel">
+  <div class="panel__head"><h2>可切换依据与切换审计</h2><span id="cap-applied">当前 {{ state.attribution_summary.cap_basis_id if state.attribution_summary else '—' }}</span></div>
+  <div id="cap-list" class="cap-list"><p class="cap-note">加载中…</p></div>
+  <output id="cap-feedback" aria-live="polite"></output>
+</section>
+{% endblock %}

@@ -23,4 +23,5 @@ def test_three_empty_types():
         with pytest.raises(BusinessError) as e:evaluate({'csv_text':text})
         assert e.value.code==code
 def test_source_rows_real(clean):
-    assert clean['counts']['input']==33
+    # 含南区 INV-C/INV-D 演示设备后的完整对照批输入行。
+    assert clean['counts']['input']==47

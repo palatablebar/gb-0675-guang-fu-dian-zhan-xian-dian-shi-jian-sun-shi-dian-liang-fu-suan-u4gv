@@ -1,0 +1,54 @@
+{% extends 'base.html' %}{% block content %}
+<section class="panel">
+  <div class="panel__head"><h2>归责口径</h2><span>上限依据 {{ state.attribution_summary.cap_basis_id }}</span></div>
+  <p class="cap-note">
+    可申报损失＝调度并网点上限把可发功率压到基线以下的部分；设备削峰＝应发潜力超出逆变器交流额定容量的固有部分；
+    待查＝实际功率低于采用上限、无法证明由限电导致的部分。三者互斥，同一缺额只归因一次，逐段守恒。
+  </p>
+  <div class="kpis attribution-kpis">
+    <div class="kpi claimable"><small>可申报损失 kWh</small><b>{{ state.attribution_summary.dispatch_kwh }}</b></div>
+    <div class="kpi clipping"><small>设备削峰 kWh</small><b>{{ state.attribution_summary.clipping_kwh }}</b></div>
+    <div class="kpi pending"><small>待查片段 kWh</small><b>{{ state.attribution_summary.pending_kwh }}</b></div>
+    <div class="kpi"><small>待查片段数</small><b>{{ state.attribution_summary.pending_segments }}</b></div>
+    <div class="kpi"><small>未定片段</small><b>{{ state.attribution_summary.unknown_segments }}</b></div>
+    <div class="kpi"><small>拆分守恒</small><b class="state-value">{{ view.metrics['拆分守恒'] }}</b></div>
+  </div>
+</section>
+<section class="panel main-panel">
+  <div class="panel__head"><h2>逐段归责明细</h2><span>{{ view.rows|length }} 条</span></div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr>
+        <th>设备</th><th>开始 UTC</th><th>时长 s</th><th>实际 kW</th><th>应发潜力 kW</th><th>基线 kW</th>
+        <th>调度上限 kW</th><th>采用上限 kW</th><th>可申报 kWh</th><th>设备削峰 kWh</th><th>待查 kWh</th><th>归责码</th><th>上限窗口</th><th>上限依据说明</th>
+      </tr></thead>
+      <tbody>
+      {% for row in view.rows %}
+        <tr class="attr-{{ row.attribution_code }}">
+          <td>{{ row.device }}</td><td>{{ row.start }}</td><td>{{ row.seconds }}</td>
+          <td>{{ row.actual_kw if row.actual_kw is not none else '未定' }}</td>
+          <td>{{ row.potential_kw if row.potential_kw is not none else '—' }}</td>
+          <td>{{ row.baseline_kw if row.baseline_kw is not none else '未定' }}</td>
+          <td>{{ row.grid_cap_kw if row.grid_cap_kw is not none else '无窗口' }}</td>
+          <td>{{ row.binding_cap_kw if row.binding_cap_kw is not none else '—' }}</td>
+          <td>{% if row.dispatch_kwh is none %}<span class="unknown">未定</span>{% else %}{{ '%.4f'|format(row.dispatch_kwh|float) }}{% endif %}</td>
+          <td>{% if row.clipping_kwh is none %}<span class="unknown">未定</span>{% else %}{{ '%.4f'|format(row.clipping_kwh|float) }}{% endif %}</td>
+          <td>{% if row.pending_kwh is none %}<span class="unknown">未定</span>{% else %}{{ '%.4f'|format(row.pending_kwh|float) }}{% endif %}</td>
+          <td><span class="code-badge">{{ row.attribution_code }}</span></td>
+          <td>{{ row.cap_basis_id or '—' }}</td><td class="reason-cell">{{ row.cap_reason }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+<section class="panel">
+  <div class="panel__head"><h2>归责码说明</h2></div>
+  <ul class="legend-list">
+    <li><span class="code-badge attr-GRID_CAP">GRID_CAP</span> 调度并网点上限约束，缺额可申报</li>
+    <li><span class="code-badge attr-DEVICE_CLIPPING">DEVICE_CLIPPING</span> 逆变器交流额定容量固有削峰，不可向调度申报</li>
+    <li><span class="code-badge attr-PENDING">PENDING</span> 实际低于采用上限（或依据与遥测矛盾），列入待查</li>
+    <li><span class="code-badge attr-NO_BASELINE">NO_BASELINE</span> 基线未定，整段保持未定，不填 0</li>
+  </ul>
+</section>
+{% endblock %}
